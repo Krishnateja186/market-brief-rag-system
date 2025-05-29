@@ -1,0 +1,23 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+env/
+venv/
+*.log
+*.sqlite3
+*.db
+pip-log.txt
+pip-delete-this-arg.txt
+htmlcov/
+.tox/
+.pytest_cache/
+.coverage
+
+# Specific to this project
+faiss_index/ # Directory where FAISS stores its vector index - DO NOT UPLOAD
