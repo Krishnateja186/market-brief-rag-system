@@ -6,7 +6,7 @@ uvicorn
 
 # For environment variables
 python-dotenv
-
+python-multipart
 # Core HTTP client (if making direct API calls)
 requests
 
