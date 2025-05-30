@@ -1,0 +1,23 @@
+# analysis_agent_requirements.txt
+
+# Web service dependencies
+fastapi
+uvicorn
+
+# Google Gemini / Generative AI
+google-generativeai==0.4.1 # Align with version used in Retriever, or check for latest compatible
+
+# LangChain components (add specific ones you use)
+langchain
+langchain-core
+# If you use specific LangChain integrations like tools or specific models:
+# langchain-google-genai==0.0.11 # If it directly interacts with Google models via LangChain
+# langchain-community # If you use community integrations/tools
+
+# For environment variables
+python-dotenv
+
+# Common data science/utility libraries that might be dependencies
+pandas
+numpy
+requests
