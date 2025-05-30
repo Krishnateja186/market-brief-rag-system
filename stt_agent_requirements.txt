@@ -1,0 +1,31 @@
+# stt_agent_requirements.txt
+
+# Web service dependencies
+fastapi
+uvicorn
+
+# For environment variables
+python-dotenv
+
+# Core HTTP client (if making direct API calls)
+requests
+
+# *** CHOOSE ONE OR MORE BASED ON YOUR STT PROVIDER ***
+# If using Google Cloud Speech-to-Text:
+# google-cloud-speech
+
+# If using OpenAI's Whisper API:
+# openai
+
+# If using AssemblyAI:
+# assemblyai
+
+# If you're doing local audio processing (e.g., handling audio files before sending):
+# pydub # For audio manipulation
+# soundfile # For reading/writing audio files
+# numpy # Often a dependency for audio processing libraries
+
+# Other general utilities your specific code might use
+# pandas
+# click
+# anyio
