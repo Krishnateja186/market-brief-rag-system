@@ -1,9 +1,11 @@
 # streamlit_app/app.py
 
 import streamlit as st
+import os
 import requests
 import io
 import base64 # For handling audio if returned as base64 string
+
 
 # --- Configuration ---
 # Configure the Orchestrator's URL using Streamlit Secrets.
