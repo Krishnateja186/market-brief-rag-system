@@ -21,7 +21,7 @@ app = FastAPI(
 )
 
 # --- Configure URLs for other microservices ---
-API_AGENT_BASE_URL = "http://localhost:8001"
+API_AGENT_BASE_URL = "https://market-brief-rag-system-1.onrender.com"
 RETRIEVER_AGENT_BASE_URL = "http://localhost:8002"
 ANALYSIS_AGENT_BASE_URL = "http://localhost:8003"
 STT_AGENT_BASE_URL = "http://localhost:8004" # Assuming you create a voice_io/stt_service.py
