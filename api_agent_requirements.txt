@@ -1,0 +1,6 @@
+uvicorn
+fastapi
+requests
+yfinance
+pandas # Often useful for processing yfinance data
+python-dotenv # If your API agent loads environment variables from a .env file (e.g., for API keys)
