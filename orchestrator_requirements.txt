@@ -15,7 +15,7 @@ httpx==0.28.1
 # pydantic
 # dataclasses-json
 # If the Orchestrator directly uses Google AI client library (not just via LangChain):
-# google-generativeai
+google-generativeai
 # google-api-core
 # googleapis-common-protos
 # protobuf
