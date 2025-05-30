@@ -4,7 +4,7 @@ requests
 langchain
 langchain-community
 langchain-core
-langchain-google-genai==0.0.19 # Add this line. You can check PyPI for the latest compatible version if 0.0.19 causes issues.
+langchain-google-genai==0.0.11 #  You can check PyPI for the latest compatible version if 0.0.19 causes issues.
 faiss-cpu
 sentence-transformers
 pandas
