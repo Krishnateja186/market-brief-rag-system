@@ -22,10 +22,10 @@ app = FastAPI(
 
 # --- Configure URLs for other microservices ---
 API_AGENT_BASE_URL = "https://market-brief-rag-system-1.onrender.com"
-RETRIEVER_AGENT_BASE_URL = "http://localhost:8002"
-ANALYSIS_AGENT_BASE_URL = "http://localhost:8003"
-STT_AGENT_BASE_URL = "http://localhost:8004" # Assuming you create a voice_io/stt_service.py
-TTS_AGENT_BASE_URL = "http://localhost:8005" # Assuming you create a voice_io/tts_service.py
+RETRIEVER_AGENT_BASE_URL = "https://market-brief-rag-system-retriever-agent.onrender.com"
+ANALYSIS_AGENT_BASE_URL = "https://market-brief-rag-system-analysis-agent.onrender.com"
+STT_AGENT_BASE_URL = "https://market-brief-rag-system-sst-agent.onrender.com" # Assuming you create a voice_io/stt_service.py
+TTS_AGENT_BASE_URL = "https://market-brief-rag-system-tts-agent.onrender.com" # Assuming you create a voice_io/tts_service.py
 
 # Initialize LanguageAgent (as it's directly imported)
 try:
