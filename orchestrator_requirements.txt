@@ -1,0 +1,27 @@
+uvicorn
+fastapi
+langchain==0.3.25
+langchain-community==0.3.24
+langchain-core==0.3.62
+langchain-google-genai==2.1.5
+langchain-text-splitters==0.3.8
+langsmith==0.3.43
+python-dotenv==1.1.0
+requests==2.32.3
+httpx==0.28.1
+# Add any other core FastAPI dependencies if not covered by fastapi itself,
+# or specific utilities *directly used by the Orchestrator's code*.
+# For example, if your Orchestrator parses specific JSON schemas, you might need:
+# pydantic
+# dataclasses-json
+# If the Orchestrator directly uses Google AI client library (not just via LangChain):
+# google-generativeai
+# google-api-core
+# googleapis-common-protos
+# protobuf
+# google-auth
+# etc. (Be careful here, often LangChain pulls these)
+
+# If the Orchestrator needs to speak directly to specific agents (e.g. if it calls them via client libraries instead of HTTP):
+# For a typical HTTP-based microservice, you generally don't need all agent-specific heavy libs here.
+# The Orchestrator's job is to route and combine, not execute ML models itself.
