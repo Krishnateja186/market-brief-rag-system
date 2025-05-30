@@ -10,7 +10,7 @@ import base64 # For handling audio if returned as base64 string
 # This URL MUST be the public URL of your Orchestrator microservice once it's deployed (e.g., on Render).
 # You need to add ORCHESTRATOR_URL = "https://your-orchestrator-url.onrender.com"
 # in your Streamlit Cloud app's Secrets.
-ORCHESTRATOR_URL = st.secrets.get("ORCHESTRATOR_URL")
+ORCHESTRATOR_URL = st.secrets.get("https://market-brief-rag-system.onrender.com")
 
 # Add a check to ensure the URL is configured in secrets
 if not ORCHESTRATOR_URL:
