@@ -4,11 +4,11 @@ requests
 langchain
 langchain-community
 langchain-core
-langchain-google-genai==0.0.11 #  You can check PyPI for the latest compatible version if 0.0.19 causes issues.
+langchain-google-genai==0.0.11
 faiss-cpu
 sentence-transformers
 pandas
 python-dotenv
-google-generativeai==0.3.0
+google-generativeai==0.4.1 # UPDATED LINE
 numpy==1.26.4
 protobuf==4.25.3
