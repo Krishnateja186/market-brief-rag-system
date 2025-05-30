@@ -1,11 +1,13 @@
 uvicorn
 fastapi
-langchain # Core LangChain library
-langchain-community # For community integrations like FAISS, Sentence Transformers
-langchain-core # Core components used by langchain
-faiss-cpu # For vector storage and similarity search (use faiss-cpu for CPU-only environment)
-sentence-transformers # For generating embeddings
-numpy # Common dependency for numerical operations in these libraries
-scikit-learn # May be a dependency or useful for some data processing
-python-dotenv # If your retriever agent loads any environment variables
-requests # If your retriever agent makes any external HTTP calls
+requests
+langchain
+langchain-community
+langchain-core
+faiss-cpu
+sentence-transformers
+pandas
+python-dotenv
+google-generativeai==0.3.0 # Or a slightly newer stable version if 0.3.0 causes issues. Check PyPI for latest stable.
+numpy==1.26.4 # Explicitly add a stable numpy version
+protobuf==4.25.3 # Explicitly add a stable protobuf version, often a dependency of google-generativeai
