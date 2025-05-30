@@ -1,0 +1,13 @@
+# tts_agent_requirements.txt
+
+# Web service dependencies
+fastapi
+uvicorn
+pydantic # Explicitly add pydantic, though fastapi usually pulls it in
+gtts     # The Google Text-to-Speech library you are using
+
+# For environment variables (if you use .env files locally)
+python-dotenv
+
+# If you were using any other HTTP clients for other purposes
+# requests
