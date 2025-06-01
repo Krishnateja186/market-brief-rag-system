@@ -1,14 +1,14 @@
 uvicorn
 fastapi
 requests
-langchain==0.2.2
-langchain-community==0.2.2
-langchain-core==0.2.2     # FIXED: Changed from 0.3.63 to 0.2.2 to resolve conflict
-langchain-google-genai==2.1.5
+langchain                   # Loosened: Let pip find compatible version
+langchain-community           # Loosened: Let pip find compatible version
+langchain-core                # Loosened: Will be forced by langchain-google-genai to >=0.3.62
+langchain-google-genai==2.1.5 # Keep this pinned as it's the specific integration you need
 faiss-cpu
 sentence-transformers
 pandas
 python-dotenv
-google-generativeai==0.6.0
+google-generativeai           # Loosened: Let pip find compatible version with langchain-google-genai
 numpy==1.26.4
 protobuf==4.25.3
