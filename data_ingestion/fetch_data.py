@@ -2,11 +2,18 @@
 
 import requests
 from typing import List, Dict, Any, Optional
+import os # NEW: Import the os module to access environment variables
 
-# Assume your API Agent is running on localhost:8001
-API_AGENT_URL = "http://localhost:8001/get_daily_asia_tech_market_data"
-# Assume your Scraping Agent (if implemented as a service) is on localhost:8004
-SCRAPING_AGENT_URL = "http://localhost:8004/scrape_data"
+# Get API Agent Base URL from environment variable
+# Provide a 'http://localhost:8001' fallback for local development if the variable isn't set.
+API_AGENT_BASE_URL = os.getenv("API_AGENT_BASE_URL", "http://localhost:8001")
+API_AGENT_URL = f"{API_AGENT_BASE_URL}/get_daily_asia_tech_market_data"
+
+# Get Scraping Agent Base URL from environment variable
+# Provide a 'http://localhost:8004' fallback for local development if the variable isn't set.
+SCRAPING_AGENT_BASE_URL = os.getenv("SCRAPING_AGENT_BASE_URL", "http://localhost:8004")
+SCRAPING_AGENT_URL = f"{SCRAPING_AGENT_BASE_URL}/scrape_data"
+
 
 def get_daily_market_data_from_api_agent(symbols: Optional[List[str]] = None) -> Dict[str, Any]:
     """
@@ -14,7 +21,7 @@ def get_daily_market_data_from_api_agent(symbols: Optional[List[str]] = None) ->
 
     Args:
         symbols (Optional[List[str]]): A list of stock symbols to fetch data for.
-                                        If None, the API Agent will use its default list.
+                                       If None, the API Agent will use its default list.
 
     Returns:
         Dict[str, Any]: The JSON response from the API Agent containing market data.
@@ -23,8 +30,7 @@ def get_daily_market_data_from_api_agent(symbols: Optional[List[str]] = None) ->
         requests.exceptions.RequestException: If an HTTP error occurs (e.g., 4xx, 5xx).
     """
     print(f"DataIngestion: Fetching daily market data from API Agent at {API_AGENT_URL}...")
-    # THIS LINE HAS BEEN CHANGED:
-    payload = {"request_symbols": symbols or []} # <--- CHANGED THIS LINE!
+    payload = {"request_symbols": symbols or []}
     response = requests.post(API_AGENT_URL, json=payload)
     response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
     data = response.json()
