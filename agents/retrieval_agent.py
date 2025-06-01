@@ -48,13 +48,15 @@ class RetrieverAgent:
         self.embeddings = GoogleGenerativeAIEmbeddings(model=embedding_model_name, google_api_key=api_key)
         self.vector_store_path = vector_store_path
         self.vectorstore = None
-        self._load_or_create_vector_store()
+        self._load_or_create_vector_store() # This method will create an empty index if none is found/loadable
         print(f"RetrieverAgent: Vector store initialized/loaded at '{vector_store_path}'.")
 
     def _load_or_create_vector_store(self):
         """
         Loads an existing FAISS index from the specified path or creates a new one.
         Handles cases where the index file might be corrupted or non-existent.
+        On Render's ephemeral file system, this will typically create a new, empty index
+        on every deployment or restart.
         """
         if os.path.exists(self.vector_store_path):
             try:
@@ -62,6 +64,7 @@ class RetrieverAgent:
                 self.vectorstore = FAISS.load_local(self.vector_store_path, self.embeddings, allow_dangerous_deserialization=True)
                 print(f"RetrieverAgent: Loaded existing FAISS index from {self.vector_store_path}.")
             except Exception as e:
+                # This is the expected path on Render if an old incompatible index was attempted to be loaded
                 print(f"RetrieverAgent: Error loading FAISS index from {self.vector_store_path}: {e}. This might indicate corruption or an incompatible version. Creating a new, empty index.")
                 # If loading fails, create a new empty index with a dummy document
                 # This ensures vectorstore is always initialized
@@ -71,9 +74,9 @@ class RetrieverAgent:
                     print("RetrieverAgent: Successfully created a new, empty index.")
                 except Exception as init_e:
                     print(f"CRITICAL ERROR: RetrieverAgent: Failed to create even an empty index: {init_e}")
-                    # If we can't even create an empty index, the service is not functional
                     raise init_e # Re-raise to prevent service startup if this critical step fails
         else:
+            # This is the expected path on Render when the service starts fresh
             print(f"RetrieverAgent: No FAISS index found at {self.vector_store_path}. Creating a new empty index.")
             # A dummy document is needed to initialize an empty FAISS index
             try:
@@ -82,20 +85,13 @@ class RetrieverAgent:
                 print("RetrieverAgent: Successfully created a new, empty index.")
             except Exception as init_e:
                 print(f"CRITICAL ERROR: RetrieverAgent: Failed to create an empty index from scratch: {init_e}")
-                raise init_e # Re-raise to prevent service startup if this critical step fails
+                raise init_e
 
 
     def index_documents(self, documents: List[str], metadata: Optional[List[Dict[str, Any]]] = None) -> int:
         """
         Indexes a list of text documents into the FAISS vector store.
-
-        Args:
-            documents: A list of text strings (document content) to be indexed.
-            metadata: Optional. A list of dictionaries, where each dictionary
-                      corresponds to a document's metadata. Length must match `documents`.
-
-        Returns:
-            The number of documents successfully indexed.
+        This method allows you to add documents to the vector store via API calls.
         """
         if not documents:
             print("RetrieverAgent: No documents provided for indexing. Returning 0 indexed documents.")
@@ -110,19 +106,18 @@ class RetrieverAgent:
 
         print(f"RetrieverAgent: Attempting to index {len(docs_to_add)} documents into vector store...")
         try:
-            # --- START: Debugging prints for indexing ---
             print(f"RetrieverAgent: Debug - Docs to add count: {len(docs_to_add)}")
             if docs_to_add:
                 print(f"RetrieverAgent: Debug - First doc content (first 100 chars): {docs_to_add[0].page_content[:100]}")
                 print(f"RetrieverAgent: Debug - First doc metadata: {docs_to_add[0].metadata}")
-            # --- END: Debugging prints ---
 
             if self.vectorstore:
                 print("RetrieverAgent: Adding documents to existing vector store...")
                 # This is the critical line where embeddings are generated and added
                 self.vectorstore.add_documents(docs_to_add)
             else:
-                # This case should ideally not happen if _load_or_create_vector_store works
+                # This case should ideally not happen if _load_or_create_vector_store works,
+                # but handled as a fallback.
                 print("RetrieverAgent: Vector store was None during indexing, creating a new one from documents.")
                 self.vectorstore = FAISS.from_documents(docs_to_add, self.embeddings)
 
@@ -140,14 +135,6 @@ class RetrieverAgent:
         """
         Retrieves the top-k most relevant text chunks from the vector store
         for a given query.
-
-        Args:
-            query (str): The search query (e.g., from the Orchestrator or Language Agent).
-            k (int): The number of top relevant chunks to retrieve. Defaults to 5.
-
-        Returns:
-            List[str]: A list of strings, where each string is the `page_content`
-                       of a retrieved relevant document chunk.
         """
         if not self.vectorstore:
             raise HTTPException(status_code=500, detail="RetrieverAgent: Vector store not initialized. Cannot perform retrieval.")
@@ -162,9 +149,6 @@ class RetrieverAgent:
             # Extract just the page_content (the text) from the Document objects
             chunks = [doc.page_content for doc in retrieved_docs]
             print(f"RetrieverAgent: Successfully retrieved {len(chunks)} chunks for the query.")
-            # Uncomment the line below for detailed debugging of retrieved chunks
-            # print(f"RetrieverAgent: Retrieved chunks (first 100 chars each):\n" +
-            #       "\n".join([chunk[:100] + "..." for chunk in chunks]))
             return chunks
         except Exception as e:
             print(f"RetrieverAgent: Error during document retrieval: {e}")
@@ -174,7 +158,6 @@ class RetrieverAgent:
 # --- FastAPI Endpoints for Retriever Agent Microservice ---
 
 # Initialize the RetrieverAgent instance. This happens once when the FastAPI application starts.
-# Any errors during this initialization will prevent the service from starting.
 try:
     # 'faiss_index' is the default path where the vector store will be saved.
     # It will create a directory with this name.
