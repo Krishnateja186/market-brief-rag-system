@@ -14,7 +14,7 @@ import base64 # For handling audio if returned as base64 string
 
 # Use os.getenv() to retrieve the environment variable
 # The environment variable should be named ORCHESTRATOR_BASE_URL
-ORCHESTRATOR_URL = os.getenv("Ohttps://market-brief-rag-system.onrender.com") # <--- THIS LINE IS CORRECTED!
+ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_BASE_URL") # <--- CORRECTED THIS LINE!
 
 # Add a check to ensure the URL is configured
 if not ORCHESTRATOR_URL:
@@ -72,8 +72,8 @@ if st.button("Generate Market Brief", type="primary", use_container_width=True):
                 payload = {"text_query": text_query}
 
                 # Make an HTTP POST request to the Orchestrator
-                # Use the ORCHESTRATOR_URL variable
-                response = requests.post(f"{https://market-brief-rag-system.onrender.com}/generate_market_brief", json=payload)
+                # Use the ORCHESTRATOR_URL variable, not a hardcoded URL
+                response = requests.post(f"{ORCHESTRATOR_URL}/generate_market_brief", json=payload) # <--- CORRECTED THIS LINE!
                 response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
 
                 brief_data = response.json() # Parse the JSON response from the Orchestrator
@@ -121,7 +121,7 @@ st.caption("""
     3.  In your terminal (e.g., PowerShell), set the environment variable:
         `$env:ORCHESTRATOR_BASE_URL="https://your-orchestrator-service.onrender.com"`
         (Replace with your actual Orchestrator URL)
-    4.  Navigate to your `streamlit_app` directory: `cd C:/Users/HP/Desktop/ragaai/streamlit_app` # <--- THIS LINE IS ALSO CORRECTED!
+    4.  Navigate to your `streamlit_app` directory: `cd C:/Users/HP/Desktop/ragaai/streamlit_app`
     5.  Run: `streamlit run app.py`
 
     **For Cloud Deployment (e.g., Streamlit Community Cloud):**
