@@ -8,17 +8,19 @@ import base64 # For handling audio if returned as base64 string
 
 
 # --- Configuration ---
-# Configure the Orchestrator's URL using Streamlit Secrets.
-# This URL MUST be the public URL of your Orchestrator microservice once it's deployed (e.g., on Render).
-# You need to add ORCHESTRATOR_URL = "https://your-orchestrator-url.onrender.com"
-# in your Streamlit Cloud app's Secrets.
-ORCHESTRATOR_URL = st.secrets.get("https://market-brief-rag-system.onrender.com")
+# Configure the Orchestrator's URL using an Environment Variable for local development.
+# For Streamlit Cloud deployment, you would typically use Streamlit Secrets
+# (but the code below is set up for os.getenv() for local testing consistency).
 
-# Add a check to ensure the URL is configured in secrets
+# Use os.getenv() to retrieve the environment variable
+# The environment variable should be named ORCHESTRATOR_BASE_URL
+ORCHESTRATOR_URL = os.getenv("https://market-brief-rag-system.onrender.com")
+
+# Add a check to ensure the URL is configured
 if not ORCHESTRATOR_URL:
-    st.error("Error: Orchestrator URL not found in Streamlit Secrets. "
-             "Please add 'ORCHESTRATOR_URL' to your app's secrets in Streamlit Community Cloud settings. "
-             "Example: ORCHESTRATOR_URL = \"https://your-orchestrator-service.onrender.com\"")
+    st.error("Error: ORCHESTRATOR_BASE_URL environment variable is not set. "
+             "Please set it in your terminal before running the app. "
+             "Example for PowerShell: $env:ORCHESTRATOR_BASE_URL=\"https://your-orchestrator-service.onrender.com\"")
     st.stop() # Stop the app from running if the critical URL is missing
 
 # --- Streamlit Page Configuration ---
@@ -62,7 +64,7 @@ if st.button("Generate Market Brief", type="primary", use_container_width=True):
         st.warning("Please enter a text query to generate the market brief.")
     else:
         st.info("Generating your market brief. This might take a moment as the AI agents coordinate...")
-        
+
         # Use a spinner to indicate ongoing processing
         with st.spinner("Talking to agents: API, Retriever, Analysis, Language..."):
             try:
@@ -70,6 +72,7 @@ if st.button("Generate Market Brief", type="primary", use_container_width=True):
                 payload = {"text_query": text_query}
 
                 # Make an HTTP POST request to the Orchestrator
+                # Use the ORCHESTRATOR_URL variable
                 response = requests.post(f"{ORCHESTRATOR_URL}/generate_market_brief", json=payload)
                 response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
 
@@ -100,7 +103,7 @@ if st.button("Generate Market Brief", type="primary", use_container_width=True):
 
             except requests.exceptions.ConnectionError:
                 st.error(f"Failed to connect to the Orchestrator at {ORCHESTRATOR_URL}. "
-                         "Please ensure the Orchestrator microservice is running and its URL is correct in Streamlit Secrets.")
+                          "Please ensure the Orchestrator microservice is running and its URL is correct in your environment variables.")
             except requests.exceptions.HTTPError as e:
                 # Catch specific HTTP errors from the Orchestrator
                 error_detail = e.response.json().get("detail", "Unknown error from Orchestrator.")
@@ -112,16 +115,19 @@ if st.button("Generate Market Brief", type="primary", use_container_width=True):
 
 st.markdown("---")
 st.caption("""
-    **To run this application (locally with backend agents):**
-    1.  Ensure all backend microservices (API Agent, Retriever Agent, Analysis Agent, Scraping Agent, STT Agent, TTS Agent) are running on their specified ports.
-    2.  Start the Orchestrator microservice (`orchestrator/main.py`) on `http://localhost:8000`.
-    3.  Set a local environment variable (e.g., in a .streamlit/secrets.toml file if using Streamlit's local secrets management) or directly in code for local testing: `ORCHESTRATOR_URL = "http://localhost:8000"`
-    4.  In your terminal, navigate to your project's root directory and run: `streamlit run streamlit_app/app.py`
+    **To run this application (locally with deployed backend agents):**
+    1.  Ensure all backend microservices (API Agent, Retriever Agent, Analysis Agent, STT Agent, TTS Agent) are deployed and running on Render.
+    2.  Get the public URL of your Orchestrator Agent from Render.
+    3.  In your terminal (e.g., PowerShell), set the environment variable:
+        `$env:ORCHESTRATOR_BASE_URL="https://your-orchestrator-service.onrender.com"`
+        (Replace with your actual Orchestrator URL)
+    4.  Navigate to your `streamlit_app` directory: `cd C:\Users\HP\Desktop\ragaai\streamlit_app`
+    5.  Run: `streamlit run app.py`
 
-    **For Cloud Deployment (Streamlit Community Cloud):**
+    **For Cloud Deployment (e.g., Streamlit Community Cloud):**
     1.  Deploy your Orchestrator microservice and other backend agents to a cloud platform (e.g., Render). Get their public/internal URLs.
     2.  In Streamlit Community Cloud settings for this app, go to "Secrets".
-    3.  Add `ORCHESTRATOR_URL = "https://your-orchestrator-url.onrender.com"` (replace with your actual URL).
+    3.  Add `ORCHESTRATOR_BASE_URL = "https://your-orchestrator-url.onrender.com"` (replace with your actual URL).
 """)
 st.markdown("---")
 st.markdown("Developed as part of the Multi-Agent Finance Assistant Assignment.")
