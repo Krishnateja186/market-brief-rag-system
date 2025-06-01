@@ -14,7 +14,7 @@ import base64 # For handling audio if returned as base64 string
 
 # Use os.getenv() to retrieve the environment variable
 # The environment variable should be named ORCHESTRATOR_BASE_URL
-ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_BASE_URL") # <--- THIS LINE IS CORRECTED!
+ORCHESTRATOR_URL = os.getenv("Ohttps://market-brief-rag-system.onrender.com") # <--- THIS LINE IS CORRECTED!
 
 # Add a check to ensure the URL is configured
 if not ORCHESTRATOR_URL:
@@ -73,7 +73,7 @@ if st.button("Generate Market Brief", type="primary", use_container_width=True):
 
                 # Make an HTTP POST request to the Orchestrator
                 # Use the ORCHESTRATOR_URL variable
-                response = requests.post(f"{ORCHESTRATOR_URL}/generate_market_brief", json=payload)
+                response = requests.post(f"{https://market-brief-rag-system.onrender.com}/generate_market_brief", json=payload)
                 response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
 
                 brief_data = response.json() # Parse the JSON response from the Orchestrator
