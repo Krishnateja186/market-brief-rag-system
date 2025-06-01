@@ -4,12 +4,12 @@ requests
 langchain
 langchain-community
 langchain-core
-langchain-google-genai==0.0.16 # UPDATED to a more recent version
+langchain-google-genai==0.0.16
 faiss-cpu
 sentence-transformers
 pandas
 python-dotenv
-google-generativeai==0.5.1 # UPDATED to a more recent, compatible version
+google-generativeai==0.5.1
 numpy==1.26.4
 protobuf==4.25.3
-pydantic==1.10.13 # NEW: Explicitly pin Pydantic to a version known to work well with LangChain v0.1.x
+pydantic==1.10.13
