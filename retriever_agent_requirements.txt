@@ -4,11 +4,11 @@ requests
 langchain
 langchain-community
 langchain-core
-langchain-google-genai==0.0.11  # Downgraded to an older version
+langchain-google-genai==0.0.11
 faiss-cpu
 sentence-transformers
 pandas
 python-dotenv
-google-generativeai==0.5.1      # Downgraded to an older, compatible version
+google-generativeai==0.4.1 # FIXED: Changed from 0.5.1 to 0.4.1 for compatibility with langchain-google-genai 0.0.11
 numpy==1.26.4
 protobuf==4.25.3
