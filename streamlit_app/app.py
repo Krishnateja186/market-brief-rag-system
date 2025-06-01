@@ -14,7 +14,7 @@ import base64 # For handling audio if returned as base64 string
 
 # Use os.getenv() to retrieve the environment variable
 # The environment variable should be named ORCHESTRATOR_BASE_URL
-ORCHESTRATOR_URL = os.getenv("https://market-brief-rag-system.onrender.com")
+ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_BASE_URL") # <--- THIS LINE IS CORRECTED!
 
 # Add a check to ensure the URL is configured
 if not ORCHESTRATOR_URL:
@@ -121,7 +121,7 @@ st.caption("""
     3.  In your terminal (e.g., PowerShell), set the environment variable:
         `$env:ORCHESTRATOR_BASE_URL="https://your-orchestrator-service.onrender.com"`
         (Replace with your actual Orchestrator URL)
-    4.  Navigate to your `streamlit_app` directory: `cd C:\Users\HP\Desktop\ragaai\streamlit_app`
+    4.  Navigate to your `streamlit_app` directory: `cd C:/Users/HP/Desktop/ragaai/streamlit_app` # <--- THIS LINE IS ALSO CORRECTED!
     5.  Run: `streamlit run app.py`
 
     **For Cloud Deployment (e.g., Streamlit Community Cloud):**
