@@ -9,14 +9,15 @@ import google.generativeai as genai
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document # To represent text chunks
-import sys # Added for sys.exit if needed
+import sys
 
 # Load environment variables (for API key)
+# Note: For Render, environment variables are set directly in the dashboard,
+# so dotenv might not be strictly necessary, but it's good for local testing.
 from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI(
-    # Changed title for consistency
     title="Retriever Agent Microservice",
     description="Indexes data embeddings and retrieves relevant text chunks for RAG."
 )
@@ -38,7 +39,9 @@ class RetrieverAgent:
         print(f"RetrieverAgent: Initializing RetrieverAgent with embedding model '{embedding_model_name}'...")
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            raise ValueError("RetrieverAgent: GOOGLE_API_KEY not found for embedding model. Please set it in your .env file.")
+            # Critical error: API key is absolutely necessary for embeddings
+            print("CRITICAL ERROR: RetrieverAgent: GOOGLE_API_KEY not found for embedding model. Please set it in your Render environment variables or .env file.")
+            raise ValueError("RetrieverAgent: GOOGLE_API_KEY not found. Service cannot start without it.")
 
         # Initialize the embedding model
         # google_api_key is passed directly for robustness
@@ -60,14 +63,26 @@ class RetrieverAgent:
                 print(f"RetrieverAgent: Loaded existing FAISS index from {self.vector_store_path}.")
             except Exception as e:
                 print(f"RetrieverAgent: Error loading FAISS index from {self.vector_store_path}: {e}. This might indicate corruption or an incompatible version. Creating a new, empty index.")
-                # If loading fails, create a new empty index
-                self.vectorstore = FAISS.from_documents([Document(page_content="initial document")], self.embeddings)
-                self.vectorstore.save_local(self.vector_store_path)
+                # If loading fails, create a new empty index with a dummy document
+                # This ensures vectorstore is always initialized
+                try:
+                    self.vectorstore = FAISS.from_documents([Document(page_content="initial document for empty index")], self.embeddings)
+                    self.vectorstore.save_local(self.vector_store_path)
+                    print("RetrieverAgent: Successfully created a new, empty index.")
+                except Exception as init_e:
+                    print(f"CRITICAL ERROR: RetrieverAgent: Failed to create even an empty index: {init_e}")
+                    # If we can't even create an empty index, the service is not functional
+                    raise init_e # Re-raise to prevent service startup if this critical step fails
         else:
             print(f"RetrieverAgent: No FAISS index found at {self.vector_store_path}. Creating a new empty index.")
             # A dummy document is needed to initialize an empty FAISS index
-            self.vectorstore = FAISS.from_documents([Document(page_content="initial document")], self.embeddings)
-            self.vectorstore.save_local(self.vector_store_path)
+            try:
+                self.vectorstore = FAISS.from_documents([Document(page_content="initial document for empty index")], self.embeddings)
+                self.vectorstore.save_local(self.vector_store_path)
+                print("RetrieverAgent: Successfully created a new, empty index.")
+            except Exception as init_e:
+                print(f"CRITICAL ERROR: RetrieverAgent: Failed to create an empty index from scratch: {init_e}")
+                raise init_e # Re-raise to prevent service startup if this critical step fails
 
 
     def index_documents(self, documents: List[str], metadata: Optional[List[Dict[str, Any]]] = None) -> int:
@@ -95,19 +110,29 @@ class RetrieverAgent:
 
         print(f"RetrieverAgent: Attempting to index {len(docs_to_add)} documents into vector store...")
         try:
+            # --- START: Debugging prints for indexing ---
+            print(f"RetrieverAgent: Debug - Docs to add count: {len(docs_to_add)}")
+            if docs_to_add:
+                print(f"RetrieverAgent: Debug - First doc content (first 100 chars): {docs_to_add[0].page_content[:100]}")
+                print(f"RetrieverAgent: Debug - First doc metadata: {docs_to_add[0].metadata}")
+            # --- END: Debugging prints ---
+
             if self.vectorstore:
-                # Add new documents to the existing vector store
+                print("RetrieverAgent: Adding documents to existing vector store...")
+                # This is the critical line where embeddings are generated and added
                 self.vectorstore.add_documents(docs_to_add)
             else:
-                # If for some reason vectorstore is None, create a new one from these docs
+                # This case should ideally not happen if _load_or_create_vector_store works
                 print("RetrieverAgent: Vector store was None during indexing, creating a new one from documents.")
                 self.vectorstore = FAISS.from_documents(docs_to_add, self.embeddings)
+
+            print("RetrieverAgent: Documents added successfully. Saving index locally...")
             self.vectorstore.save_local(self.vector_store_path)
             print(f"RetrieverAgent: Successfully indexed {len(docs_to_add)} documents and saved index locally.")
             return len(docs_to_add)
         except Exception as e:
-            print(f"RetrieverAgent: Error during document indexing: {e}")
-            # Re-raise as HTTPException for FastAPI to catch and return a proper error response
+            # Enhanced error logging to capture the exact exception during indexing
+            print(f"RetrieverAgent: !!!!! CRITICAL ERROR during document indexing: {type(e).__name__} - {e}")
             raise HTTPException(status_code=500, detail=f"Failed to index documents into vector store: {e}")
 
 
@@ -199,6 +224,7 @@ async def index_data_endpoint(request: IndexRequest):
         raise e
     except Exception as e:
         # Catch any other unexpected errors during indexing
+        print(f"RetrieverAgent: !!! UNCAUGHT EXCEPTION in /index_data endpoint: {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred during indexing: {e}")
 
 @app.post("/retrieve_chunks", response_model=RetrieveResponse)
@@ -219,4 +245,5 @@ async def retrieve_chunks_endpoint(request: RetrieveRequest):
         raise e
     except Exception as e:
         # Catch any other unexpected errors during retrieval
+        print(f"RetrieverAgent: !!! UNCAUGHT EXCEPTION in /retrieve_chunks endpoint: {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred during retrieval: {e}")
