@@ -8,11 +8,10 @@ import asyncio # For async HTTP calls
 
 # Import agent classes directly if they are not exposed as microservices (e.g., LanguageAgent)
 from agents.language_agent import LanguageAgent # LanguageAgent will be instantiated directly
-# from agents.voice_agent import VoiceAgent # Will import this when created
 
 # Import helper functions from data_ingestion
-# THIS IS THE LINE THAT MUST BE CORRECT:
-from data_ingestion.fetch_data import get_daily_market_data_from_api_agent # <--- ENSURE THIS LINE IS EXACTLY AS SHOWN!
+# IMPORTANT: get_daily_market_data_from_api_agent will now expect a base_url argument
+from data_ingestion.fetch_data import get_daily_market_data_from_api_agent
 from data_ingestion.preprocess import format_market_data_for_retrieval
 
 app = FastAPI(
@@ -21,6 +20,8 @@ app = FastAPI(
 )
 
 # --- Configure URLs for other microservices ---
+# These URLs are correct as they are defined here for the Orchestrator to use.
+# Ensure these URLs match your actual deployed Render service URLs EXACTLY.
 API_AGENT_BASE_URL = "https://market-brief-rag-system-1.onrender.com"
 RETRIEVER_AGENT_BASE_URL = "https://market-brief-rag-system-retriever-agent.onrender.com"
 ANALYSIS_AGENT_BASE_URL = "https://market-brief-rag-system-analysis-agent.onrender.com"
@@ -53,9 +54,8 @@ async def generate_market_brief_endpoint(request: BriefRequest):
     # --- Step 1: Get Raw Market Data (from API Agent) ---
     print("Orchestrator: Calling API Agent to get daily market data...")
     try:
-        # You can specify symbols or let the API agent use its default
-        # THIS IS WHERE THE CORRECTED FUNCTION IS USED:
-        raw_market_data = get_daily_market_data_from_api_agent() 
+        # Pass the correct API_AGENT_BASE_URL from orchestrator's config
+        raw_market_data = get_daily_market_data_from_api_agent(api_agent_base_url=API_AGENT_BASE_URL) # <--- MODIFIED THIS LINE!
         print(f"Orchestrator: API Agent returned data for {len(raw_market_data.get('stocks',[]))} stocks and {len(raw_market_data.get('earnings_surprises',[]))} earnings surprises.")
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=503, detail=f"Failed to connect to API Agent: {e}")
