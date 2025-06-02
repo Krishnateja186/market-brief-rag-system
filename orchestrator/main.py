@@ -2,15 +2,14 @@
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import requests # For making HTTP requests to other microservices
+import requests
 from typing import List, Dict, Any, Optional
-import asyncio # For async HTTP calls
+import asyncio
 
 # Import agent classes directly if they are not exposed as microservices (e.g., LanguageAgent)
 from agents.language_agent import LanguageAgent # LanguageAgent will be instantiated directly
 
 # Import helper functions from data_ingestion
-# IMPORTANT: get_daily_market_data_from_api_agent will now expect a base_url argument
 from data_ingestion.fetch_data import get_daily_market_data_from_api_agent
 from data_ingestion.preprocess import format_market_data_for_retrieval
 
@@ -20,13 +19,11 @@ app = FastAPI(
 )
 
 # --- Configure URLs for other microservices ---
-# These URLs are correct as they are defined here for the Orchestrator to use.
-# Ensure these URLs match your actual deployed Render service URLs EXACTLY.
 API_AGENT_BASE_URL = "https://market-brief-rag-system-1.onrender.com"
 RETRIEVER_AGENT_BASE_URL = "https://market-brief-rag-system-retriever-agent.onrender.com"
 ANALYSIS_AGENT_BASE_URL = "https://market-brief-rag-system-analysis-agent.onrender.com"
-STT_AGENT_BASE_URL = "https://market-brief-rag-system-sst-agent.onrender.com" # Assuming you create a voice_io/stt_service.py
-TTS_AGENT_BASE_URL = "https://market-brief-rag-system-tts-agent.onrender.com" # Assuming you create a voice_io/tts_service.py
+STT_AGENT_BASE_URL = "https://market-brief-rag-system-sst-agent.onrender.com"
+TTS_AGENT_BASE_URL = "https://market-brief-rag-system-tts-agent.onrender.com"
 
 # Initialize LanguageAgent (as it's directly imported)
 try:
@@ -35,16 +32,38 @@ except Exception as e:
     print(f"CRITICAL ERROR: Orchestrator failed to initialize LanguageAgent: {e}")
     language_agent_instance = None
 
-
 class BriefRequest(BaseModel):
-    text_query: str # User's query in text format
-    # audio_file: Optional[bytes] = None # For voice input, would be handled by Streamlit sending bytes
+    text_query: str
+
+# NEW: Pydantic models to mirror API Agent's MarketBriefData response
+# These should match the models defined in your API Agent's api_agent.py
+class StockDataResponse(BaseModel):
+    symbol: str
+    name: str
+    date: str
+    price: float
+
+class EarningsDataItem(BaseModel):
+    symbol: str
+    name: str
+    date: str
+    actual_eps: Optional[float] = None
+    estimated_eps: Optional[float] = None
+    surprise_percent: Optional[float] = None
+
+class OrchestratorResponse(BaseModel):
+    """
+    Response model for the Orchestrator, now including raw market data.
+    """
+    market_brief_text: str
+    raw_stock_prices: List[StockDataResponse]
+    raw_earnings_surprises: List[EarningsDataItem]
 
 @app.get("/")
 def root():
     return {"message": "Orchestrator is running. Go to /docs for usage."}
 
-@app.post("/generate_market_brief")
+@app.post("/generate_market_brief", response_model=OrchestratorResponse) # <--- MODIFIED: Use new response_model
 async def generate_market_brief_endpoint(request: BriefRequest):
     print(f"\nOrchestrator: Received request to generate market brief for query: '{request.text_query}'")
 
@@ -54,8 +73,7 @@ async def generate_market_brief_endpoint(request: BriefRequest):
     # --- Step 1: Get Raw Market Data (from API Agent) ---
     print("Orchestrator: Calling API Agent to get daily market data...")
     try:
-        # Pass the correct API_AGENT_BASE_URL from orchestrator's config
-        raw_market_data = get_daily_market_data_from_api_agent(api_agent_base_url=API_AGENT_BASE_URL) # <--- MODIFIED THIS LINE!
+        raw_market_data = get_daily_market_data_from_api_agent(api_agent_base_url=API_AGENT_BASE_URL)
         print(f"Orchestrator: API Agent returned data for {len(raw_market_data.get('stocks',[]))} stocks and {len(raw_market_data.get('earnings_surprises',[]))} earnings surprises.")
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=503, detail=f"Failed to connect to API Agent: {e}")
@@ -68,9 +86,6 @@ async def generate_market_brief_endpoint(request: BriefRequest):
     print(f"Orchestrator: Prepared {len(documents_for_retrieval)} documents for indexing.")
 
     # --- Step 3: Index Data (via Retriever Agent Microservice) ---
-    # This step would typically be run daily at 8 AM as a separate job,
-    # or for new data. For continuous tracking, index whenever new data arrives.
-    # For demonstration, we'll index every time.
     print("Orchestrator: Calling Retriever Agent to index data...")
     try:
         index_payload = {
@@ -94,18 +109,16 @@ async def generate_market_brief_endpoint(request: BriefRequest):
         analysis_response.raise_for_status()
         analytical_insights = analysis_response.json()
         print("Orchestrator: Analysis Agent returned insights.")
-        # print(f"Orchestrator: Insights: {analytical_insights}") # Uncomment for debugging
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=503, detail=f"Failed to connect to Analysis Agent: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error analyzing data via Analysis Agent: {e}")
 
     # --- Step 5: Retrieve Relevant Chunks (via Retriever Agent Microservice) ---
-    # The query for retrieval should be derived from the user's brief request
     retrieval_query = request.text_query
     print(f"Orchestrator: Calling Retriever Agent to retrieve chunks for query: '{retrieval_query}'...")
     try:
-        retrieve_payload = {"query": retrieval_query, "k": 5} # Retrieve top 5 relevant chunks
+        retrieve_payload = {"query": retrieval_query, "k": 5}
         retrieve_response = requests.post(f"{RETRIEVER_AGENT_BASE_URL}/retrieve_chunks", json=retrieve_payload)
         retrieve_response.raise_for_status()
         retrieved_chunks = retrieve_response.json().get("chunks", [])
@@ -116,11 +129,7 @@ async def generate_market_brief_endpoint(request: BriefRequest):
         raise HTTPException(status_code=500, detail=f"Error retrieving chunks via Retriever Agent: {e}")
 
     # --- Step 6: Synthesize Narrative (via Language Agent) ---
-    # Combine raw data, analysis insights, and retrieved chunks for the Language Agent's context
-    # We'll build the context string from retrieved chunks AND analytical insights
-    final_context_for_llm = retrieved_chunks # Start with chunks from Retriever Agent
-
-    # Add structured insights from Analysis Agent to the context
+    final_context_for_llm = retrieved_chunks
     if analytical_insights.get("portfolio_allocation"):
         alloc = analytical_insights["portfolio_allocation"]
         final_context_for_llm.append(
@@ -142,33 +151,15 @@ async def generate_market_brief_endpoint(request: BriefRequest):
 
     print("Orchestrator: Calling Language Agent to synthesize market brief...")
     try:
-        # The LanguageAgent is imported directly, so we call its method
         synthesized_brief = language_agent_instance.synthesize_market_brief(request.text_query, final_context_for_llm)
         print("Orchestrator: Market brief synthesized by Language Agent.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error synthesizing brief with Language Agent: {e}")
 
-    # --- Step 7: (Future) Convert Text to Speech (via TTS Agent Microservice) ---
-    # This step will be added when you build the Voice Agent (TTS part)
-    # print("Orchestrator: Calling TTS Agent to convert brief to speech...")
-    # try:
-    #     tts_payload = {"text": synthesized_brief}
-    #     tts_response = requests.post(f"{TTS_AGENT_BASE_URL}/text_to_speech", json=tts_payload)
-    #     tts_response.raise_for_status()
-    #     audio_bytes = tts_response.content # Assuming it returns audio bytes
-    #     print("Orchestrator: TTS Agent returned audio.")
-    #     # Return audio or a link to audio
-    #     return {"market_brief_text": synthesized_brief, "market_brief_audio": audio_bytes}
-    # except requests.exceptions.RequestException as e:
-    #     raise HTTPException(status_code=503, detail=f"Failed to connect to TTS Agent: {e}")
-    # except Exception as e:
-    #     raise HTTPException(status_code=500, detail=f"Error converting text to speech: {e}")
-
-    print("Orchestrator: Market brief generation complete (text only for now).")
-    return {"market_brief_text": synthesized_brief}
-
-# To run this:
-# 1. Ensure all other agents (API, Retriever, Analysis) are running as microservices on their designated ports.
-# 2. pip install fastapi uvicorn requests
-# 3. From your project root, run: uvicorn orchestrator.main:app --reload --port 8000
-# 4. Access it in your browser at http://127.0.0.1:8000/docs
+    print("Orchestrator: Market brief generation complete.")
+    # <--- MODIFIED: Return both brief and raw data
+    return OrchestratorResponse(
+        market_brief_text=synthesized_brief,
+        raw_stock_prices=raw_market_data.get("stocks", []),
+        raw_earnings_surprises=raw_market_data.get("earnings_surprises", [])
+    )
