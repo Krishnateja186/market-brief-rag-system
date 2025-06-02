@@ -1,11 +1,11 @@
 # streamlit_app/app.py
 
 import streamlit as st
-import os
 import requests
-import io
-import base64 # For handling audio if returned as base64 string
-
+import pandas as pd # <--- Make sure this is imported
+import os # For environment variables
+# import io # Not needed for current text/JSON data
+# import base64 # Not needed for current text/JSON data
 
 # --- Configuration ---
 # Configure the Orchestrator's URL using an Environment Variable for local development.
@@ -14,7 +14,7 @@ import base64 # For handling audio if returned as base64 string
 
 # Use os.getenv() to retrieve the environment variable
 # The environment variable should be named ORCHESTRATOR_BASE_URL
-ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_BASE_URL") # <--- CORRECTED THIS LINE!
+ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_BASE_URL")
 
 # Add a check to ensure the URL is configured
 if not ORCHESTRATOR_URL:
@@ -53,9 +53,6 @@ text_query = st.text_input(
 # Voice Input Placeholder (to be fully implemented with STT Agent)
 st.subheader("🗣️ Voice Input (Under Development)")
 st.info("Voice input will be enabled once the **Voice Agent (STT)** is fully integrated and deployed.")
-# You can add a placeholder button if you like, but it won't be functional yet
-# if st.button("🎙️ Record Voice Query"):
-#     st.warning("Voice recording and STT integration is not yet active. Please use text input.")
 
 
 # --- Generate Brief Button ---
@@ -72,38 +69,49 @@ if st.button("Generate Market Brief", type="primary", use_container_width=True):
                 payload = {"text_query": text_query}
 
                 # Make an HTTP POST request to the Orchestrator
-                # Use the ORCHESTRATOR_URL variable, not a hardcoded URL
-                response = requests.post(f"{ORCHESTRATOR_URL}/generate_market_brief", json=payload) # <--- CORRECTED THIS LINE!
+                response = requests.post(f"{ORCHESTRATOR_URL}/generate_market_brief", json=payload)
                 response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
 
-                brief_data = response.json() # Parse the JSON response from the Orchestrator
+                # Parse the response, which now contains both text and raw data
+                orchestrator_response = response.json() # <--- This will be the full dictionary
+
+                # Extract the components from the Orchestrator's response
+                market_brief_text = orchestrator_response.get("market_brief_text", "No brief text was generated.")
+                raw_stock_prices = orchestrator_response.get("raw_stock_prices", []) # <--- New: Extract raw stock prices
+                raw_earnings_surprises = orchestrator_response.get("raw_earnings_surprises", []) # <--- New: Extract raw earnings surprises
+
 
                 st.subheader("📊 Your Market Brief:")
 
                 # Display the synthesized text brief
-                brief_text = brief_data.get("market_brief_text", "No brief text was generated. Please check Orchestrator logs.")
-                st.markdown(brief_text)
+                st.markdown(market_brief_text)
 
-                # --- Audio Playback Section (Future Integration with TTS Agent) ---
-                # The Orchestrator should return audio bytes or a base64 encoded string
-                # For now, the Orchestrator returns only text. When TTS is integrated,
-                # uncomment and adapt this section.
-                # if "market_brief_audio" in brief_data:
-                #     audio_base64 = brief_data["market_brief_audio"]
-                #     if audio_base64:
-                #         audio_bytes = base64.b64decode(audio_base64)
-                #         st.audio(audio_bytes, format='audio/mpeg') # Or 'audio/wav' depending on TTS output
-                #         st.success("Brief generated and ready to play!")
-                #     else:
-                #         st.info("Audio brief is empty.")
-                # else:
-                #     st.info("Audio brief generation is not yet fully enabled by the Orchestrator.")
+                # --- Display Raw Stock Prices --- <--- NEW SECTION
+                if raw_stock_prices:
+                    st.subheader("Current Stock Prices (from API Agent):")
+                    # Convert list of dicts to DataFrame for nice display
+                    df_stocks = pd.DataFrame(raw_stock_prices)
+                    # Reorder columns for better readability
+                    df_stocks = df_stocks[['symbol', 'name', 'price', 'date']]
+                    st.dataframe(df_stocks, use_container_width=True)
+                else:
+                    st.info("No current stock price data retrieved from API Agent.")
+
+                # --- Display Raw Earnings Surprises --- <--- NEW SECTION
+                if raw_earnings_surprises:
+                    st.subheader("Recent Earnings Surprises (from API Agent):")
+                    df_earnings = pd.DataFrame(raw_earnings_surprises)
+                    # Reorder columns for better readability
+                    df_earnings = df_earnings[['symbol', 'name', 'date', 'actual_eps', 'estimated_eps', 'surprise_percent']]
+                    st.dataframe(df_earnings, use_container_width=True)
+                else:
+                    st.info("No recent earnings surprise data retrieved from API Agent.")
 
                 st.success("Market brief generated successfully!")
 
             except requests.exceptions.ConnectionError:
                 st.error(f"Failed to connect to the Orchestrator at {ORCHESTRATOR_URL}. "
-                          "Please ensure the Orchestrator microservice is running and its URL is correct in your environment variables.")
+                         "Please ensure the Orchestrator microservice is running and its URL is correct in your environment variables.")
             except requests.exceptions.HTTPError as e:
                 # Catch specific HTTP errors from the Orchestrator
                 error_detail = e.response.json().get("detail", "Unknown error from Orchestrator.")
@@ -112,6 +120,8 @@ if st.button("Generate Market Brief", type="primary", use_container_width=True):
             except Exception as e:
                 st.error(f"An unexpected error occurred during brief generation: {e}")
                 st.exception(e) # Display full traceback for debugging
+    else:
+        st.warning("Please enter a query to generate a market brief.")
 
 st.markdown("---")
 st.caption("""
